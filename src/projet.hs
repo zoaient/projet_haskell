@@ -12,9 +12,11 @@ data Domain =
     RootDom String |
     NodeDom String Domain
 
+
 data Path = 
     RootPath String |
     NodePath String Path
+
 
 data KeyVal = KeyVal String String
 
@@ -30,6 +32,8 @@ data URL = MkURL {
     request :: Maybe Request,
     fragment :: Maybe String
 }
+    
+
 
 isLetter::Char -> Bool
 isLetter c = (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'))
@@ -111,7 +115,9 @@ parseSplitedPath:: [String] -> Either String Path
 parseSplitedPath tab = case tab of
     [s1] | not (onlyAlpha s1) -> Left "Erreur Path"
     [s1] -> Right (RootPath s1)
+    [s1,""] -> Right (RootPath s1)
     (x:_) | not (onlyAlpha x) -> Left "Erreur Path"
+    ("":xs)-> parseSplitedPath xs
     (x:xs) ->
         let next = parseSplitedPath xs in
             case next of
@@ -131,6 +137,11 @@ parseUrl4 prot frag req str = case splitOn "/" str of
             case next of
                 Left err -> Left err
                 Right dom -> Right (assemble prot frag req dom Nothing)
+    [s1,""] -> 
+        let next = parseSplitedDomain (splitOn "." s1) in
+            case next of
+                Left err -> Left err
+                Right dom -> Right (assemble prot frag req dom Nothing)
     (x:xs) ->
         let next = parseSplitedDomain (splitOn "." x) in
             let next2 = parseSplitedPath xs in
@@ -141,9 +152,35 @@ parseUrl4 prot frag req str = case splitOn "/" str of
     _ -> Left "Erreur Path + Domain "
 
 
+instance Show Domain where
+    show d = case d of
+        RootDom s -> s
+        NodeDom x xs -> x++"."++(show xs)
 
+instance Show Path where
+    show p = case p of
+        RootPath s -> "/" ++ s
+        NodePath s xs -> "/"++s++(show xs)
+
+instance Show Request where
+    show r = case r of 
+        RootReq (KeyVal k v) -> k++"="++v
+        NodeReq (KeyVal k v) xs -> k++"="++v++"&"++(show xs)
+
+
+
+instance Show URL where
+    show url = case (url.path,url.request,url.fragment) of
+        (Nothing,Nothing,Nothing) -> ( url.protocole)++"://"++(show url.domain)
+        (Nothing,Nothing,Just c) -> ( url.protocole)++"://"++(show url.domain)++"#"++c
+        (Nothing,Just b,Nothing) -> ( url.protocole)++"://"++(show url.domain)++"?"++(show b)
+        (Nothing,Just b,Just c) -> ( url.protocole)++"://"++(show url.domain)++"?"++(show b)++"#"++(c)
+        (Just a,Nothing,Nothing) -> ( url.protocole)++"://"++(show url.domain)++(show a)
+        (Just a,Nothing,Just c) -> ( url.protocole)++"://"++(show url.domain)++(show a)++"#"++(c)
+        (Just a,Just b,Nothing) -> ( url.protocole)++"://"++(show url.domain)++(show a)++"?"++(show b)
+        (Just a,Just b,Just c) -> ( url.protocole)++"://"++(show url.domain)++(show a)++"?"++(show b)++"#"++(c)
+        
 
 main :: IO ()
-main = let tmp = parseUrl "http://google.com" in
-    putStrLn "Hi"
-
+main = let tmp = parseUrl "http://www.google.com/hi/hello/?val1=val2&t1=v2#huiaudhaiuhdz" in
+    putStrLn (show tmp)
