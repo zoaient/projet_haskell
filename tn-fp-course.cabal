@@ -1,0 +1,79 @@
+cabal-version:      2.4
+name:               projet
+version:            2023
+
+synopsis:           Lab exercises for Telecom Nancy Functional Programming course
+bug-reports:        https://github.com/smelc/tn-fp-haskell-course
+license:            Unlicense
+author:             Clément Hurlin
+maintainer:         smelc@users.noreply.github.com
+
+common common-all
+     default-language: Haskell2010
+     build-depends:    base ^>=4.20.0.0
+                     , aeson
+                     , bytestring
+                     , containers
+                     , extra
+                     , filepath
+                     , generic-random
+                     , http-conduit
+                     , ilist
+                     , megaparsec
+                     , mtl
+                     , random
+                     , random-shuffle
+                     , req
+                     , process
+                     , QuickCheck
+                     , scotty
+                     , split
+                     , text
+                     , utf8-string
+                     , vector
+     ghc-options:      -Wall
+                       -Wunticked-promoted-constructors
+                       -Wno-name-shadowing
+                       -Wno-unused-imports
+                       -Werror
+                       -Wwarn=missing-home-modules
+     default-extensions: ConstraintKinds
+                         DataKinds
+                         DeriveGeneric
+                         DeriveFunctor
+                         DuplicateRecordFields
+                         FlexibleContexts
+                         FlexibleInstances
+                         FunctionalDependencies
+                         GADTs
+                         InstanceSigs
+                         MultiParamTypeClasses
+                         NamedFieldPuns
+                         LambdaCase
+                         OverloadedRecordDot
+                         OverloadedStrings
+                         RecordWildCards
+                         ScopedTypeVariables
+                         TypeApplications
+                         TypeFamilies
+
+library slides
+    import:           common-all
+    hs-source-dirs:   slides
+
+    -- Modules included in this executable, other than Main.
+    other-modules:    Course01
+                      Course02
+                      Course03
+                      Course04
+                      Course05
+
+library
+    import:           common-all
+    hs-source-dirs:   tps
+    exposed-modules:  Scratch
+
+executable projet.hs
+    import:           common-all
+    main-is:          projet.hs
+    hs-source-dirs:   src
