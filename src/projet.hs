@@ -8,6 +8,8 @@ import Data.Aeson (Value(Null))
 import Data.List.Split
 
 
+-- Stuctures réccursives
+
 data Domain = 
     RootDom String |
     NodeDom String Domain
@@ -34,6 +36,7 @@ data URL = MkURL {
 }
     
 
+-- Fonctions pour check si les strings sont valides
 
 isLetter::Char -> Bool
 isLetter c = (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'))
@@ -51,6 +54,9 @@ onlyAlphaNum [] = True
 onlyAlphaNum (x:xs) | isLetterOrNumber x  = onlyAlphaNum xs
 onlyAlphaNum _ = False
 
+
+-- Fonction principale On sépare le protocole et on passe a l'étape suivante
+-- Chaque étape garde dans ces parmaètres les résultats des fonctions précédentes
 parseUrl:: String -> Either String URL
 parseUrl str = case splitOn "://" str of
     [s1,_] | not (onlyAlpha s1) -> Left "Erreur domain"
@@ -58,13 +64,18 @@ parseUrl str = case splitOn "://" str of
 
     _ -> Left "Erreur domain"
 
+
+-- Par example parseUrl2 ici garde le protocole calculé dans parseUrl dans sont premier argument
+-- parseUrl2 extarit le fragment
 parseUrl2:: String -> String -> Either String URL
 parseUrl2 prot str = case splitOn "#" str of
     [s1] -> parseUrl3 prot Nothing s1
-    [_,s2] | not (onlyAlpha s2) -> Left "Fragment Invalide"
+    [_,s2] | not (onlyAlphaNum s2) -> Left "Fragment Invalide"
     [s1,s2] -> parseUrl3 prot (Just s2) s1
     _ -> Left "Fragment Invalide"
 
+
+-- Fonction qui prend un tableau de String de requete et en fait une type Request (ou renvoie une erreur)
 parseSplitedRequest:: [String] -> Either String Request
 parseSplitedRequest tab = case tab of
     [s1]  -> case splitOn "=" s1 of
@@ -81,12 +92,14 @@ parseSplitedRequest tab = case tab of
         _ -> Left "Erreur request"
     _ -> Left "Erreur request"
 
+
+--Sépare les requetes mise ensebles et renvoie un objet Request (ou Erreur)
 parseRequest:: String -> Either String Request
 parseRequest str = parseSplitedRequest (splitOn "&" str)
 
 
 
-
+-- Extarit les requetes de l'url puis passe a l'étape suivante
 parseUrl3:: String -> Maybe String -> String->Either String URL
 parseUrl3 prot frag str = case splitOn "?" str of 
     [s1] -> parseUrl4 prot frag Nothing s1
@@ -98,6 +111,7 @@ parseUrl3 prot frag str = case splitOn "?" str of
     _ -> Left "Erreur request"
 
 
+-- Meme chose que pour parseSplitedRequest mais pour les domaines
 parseSplitedDomain:: [String] -> Either String Domain
 parseSplitedDomain tab = case tab of
     [s1] | not (onlyAlpha s1) -> Left "Erreur Domaine"
@@ -125,11 +139,11 @@ parseSplitedPath tab = case tab of
                 Right obj -> Right (NodePath x obj)
     _ -> Left "Erreur Path"
 
-
+-- Fonction qui assemble touts les objet dans la structure URL
 assemble:: String -> Maybe String -> Maybe Request -> Domain -> Maybe Path -> URL
 assemble prot frag req dom path = MkURL{protocole = prot, domain = dom, path = path,request = req,fragment = frag}
 
-
+-- Dèrnière étape on extarit le domaine et chemin
 parseUrl4::String -> Maybe String -> Maybe Request -> String -> Either String URL
 parseUrl4 prot frag req str = case splitOn "/" str of 
     [s1] -> 
@@ -152,6 +166,8 @@ parseUrl4 prot frag req str = case splitOn "/" str of
     _ -> Left "Erreur Path + Domain "
 
 
+
+-- Fonction Shows
 instance Show Domain where
     show d = case d of
         RootDom s -> s
@@ -180,6 +196,8 @@ instance Show URL where
         (Just a,Just b,Nothing) -> ( url.protocole)++"://"++(show url.domain)++(show a)++"?"++(show b)
         (Just a,Just b,Just c) -> ( url.protocole)++"://"++(show url.domain)++(show a)++"?"++(show b)++"#"++(c)
         
+
+-- Tests Quickcheck
 
 listWithLength :: (Int, Int) -> Gen a -> Gen [a]
 listWithLength (minLen, maxLen) gen = do
@@ -234,6 +252,8 @@ genFragmentStr =
     (1, ("#" ++) <$> genAlphaWithLength (2, 10))
   ]
 
+
+-- Generateur d'url
 genUrlStr :: Gen String
 genUrlStr = do
   schemeStr <- genSchemeStr
@@ -244,7 +264,7 @@ genUrlStr = do
   return $ schemeStr ++ "://" ++ domainStr ++ pathStr ++ requestStr ++ fragmentStr
 
 
-
+-- Propriété a tester
 testproprety::String -> Bool
 testproprety s =
     let check = parseUrl s in 
@@ -254,6 +274,7 @@ testproprety s =
 
 -- Part2
 
+-- Stuctures (récursives)
 
 data ProtocolFilter = Star | Name String
     deriving (Show)
@@ -278,6 +299,8 @@ data Filter = MkFilter{
     
 }   deriving (Show)
 
+
+-- Parser pour le filtre
 parseFilter :: String -> Either String Filter
 parseFilter str = case splitOn "://" str of
     [s1,s2] -> do
@@ -287,11 +310,14 @@ parseFilter str = case splitOn "://" str of
 
     _ -> Left "Error"
 
+-- Parser pour le filtre de protocol
 parseProtocolFilter :: String -> Either String ProtocolFilter
 parseProtocolFilter s = case s of
     "*" -> Right Star
     s | not (onlyAlpha s) -> Left "Error Protocol"
     s -> Right (Name s)  
+
+
 
 parseDomainFilter:: [String] -> Either String DomainFilterTree
 parseDomainFilter s = case s of 
@@ -303,14 +329,16 @@ parseDomainFilter s = case s of
     (x:xs) -> (\valid -> NodeFil (NameDom x) valid) <$> (parseDomainFilter xs)
     _ -> Left "Error Domain"
 
+
+-- Parser pour le filtre du domaine
 parseDomainFilterStar:: String -> Either String DomainFilter
 parseDomainFilterStar s = case splitOn "." s of
     ["**"] -> Right JustDoubleStar
     ("**":xs) -> (\valid -> DoubleStar valid) <$> (parseDomainFilter xs)
     x -> (\valid -> NoDoubleStar valid) <$> (parseDomainFilter x)
 
-
+-- Main: Effectue les tests et parse 2 urls
 main :: IO ()
 main = do
-    putStrLn (show (parseFilter "*://**.hello.*.com") ++ show (parseUrl "http://google.com"))
+    putStrLn (show (parseFilter "*://**.hello.*.com") ++ show (parseUrl "http://google.com/hello/world?key1=val1&bonjour=aurevoir#5555"))
     quickCheck (forAll genUrlStr testproprety)
