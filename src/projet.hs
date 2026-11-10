@@ -181,6 +181,76 @@ instance Show URL where
         (Just a,Just b,Just c) -> ( url.protocole)++"://"++(show url.domain)++(show a)++"?"++(show b)++"#"++(c)
         
 
+listWithLength :: (Int, Int) -> Gen a -> Gen [a]
+listWithLength (minLen, maxLen) gen = do
+  len <- choose (minLen, maxLen)
+  vectorOf len gen
+
+genAlphaWithLength :: (Int, Int) -> Gen String
+genAlphaWithLength lenRange =
+  listWithLength lenRange (elements ['a'..'z'])
+
+genSchemeStr :: Gen String
+genSchemeStr = elements ["http", "https", "ftp", "ssh"]
+
+genDomainNameStr :: Gen String
+genDomainNameStr = do
+  tld <- genAlphaWithLength (2, 4)
+  sld <- genAlphaWithLength (2, 10)
+  subdomains <- frequency [
+      (3, return []),
+      (1, listWithLength (1, 5) $ genAlphaWithLength (2, 10))
+    ]
+  let subdomainsString = foldr (\sub acc -> acc ++ sub ++ ".") "" subdomains
+  return $ subdomainsString ++ sld ++ "." ++ tld
+
+genPathStr :: Gen String
+genPathStr = frequency [
+    (3, return ""),
+    (1, do
+      segments <- listWithLength (1, 5) $ genAlphaWithLength (2, 10)
+      return $ foldr (\seg acc -> "/" ++ seg ++ acc) "" segments
+    )
+  ]
+
+genRequestStr :: Gen String
+genRequestStr = frequency [
+    (3, return ""),
+    (1, do
+      k <- genAlphaWithLength (2, 10)
+      v <- genAlphaWithLength (2, 10)
+      rest <- listWithLength (0, 4) $ do
+        key <- genAlphaWithLength (2, 10)
+        value <- genAlphaWithLength (2, 10)
+        return (key, value)
+      return $ "?" ++ k ++ "=" ++ v ++ foldr (\(key, value) acc -> "&" ++ key ++ "=" ++ value ++ acc) "" rest
+    )
+  ]
+
+genFragmentStr :: Gen String
+genFragmentStr =
+  frequency [
+    (3, return ""),
+    (1, ("#" ++) <$> genAlphaWithLength (2, 10))
+  ]
+
+genUrlStr :: Gen String
+genUrlStr = do
+  schemeStr <- genSchemeStr
+  domainStr <- genDomainNameStr
+  pathStr <- genPathStr
+  requestStr <- genRequestStr
+  fragmentStr <- genFragmentStr
+  return $ schemeStr ++ "://" ++ domainStr ++ pathStr ++ requestStr ++ fragmentStr
+
+
+instance Arbitrary URL where
+  arbitrary = 
+    genUrlStr >>= \urlStr -> case parseUrl urlStr of
+      Left _ -> arbitrary 
+      Right url -> return url
+
+
 main :: IO ()
 main = let tmp = parseUrl "http://www.google.com/hi/hello/?val1=val2&t1=v2#huiaudhaiuhdz" in
     putStrLn (show tmp)

@@ -184,7 +184,7 @@ Le barème est donné à titre indicatif
 - Parsing et affichage d'une URL : 14 points
 - Filtrage : 8 points
 
-Le but du projet est d'opérer en tant qu'ingénieur. La clarté du code, celle des commentaires/explications, et la prise d'initiatives seront partie intégrante de l'évaluation. Veillez à suivre les bonnes pratiques vues en cours (par exemple pour la représentation des erreurs / fonctions au comportement partiel).
+Le but du projet est d'opérer en tant qu'ingénieur. La clarté du code, celle des commentaires/explications, et la prise d'initiatives seront partie intégrante de l'évaluation. Veillez à suivre les bonnes pratiques vues en cours (par exemple pour la représentation des erreurs / fonctions au comportement partiel).   
 
 N'hésitez pas à prendre les arbitrages ou décisions nécessaires pour rendre le projet dans l'état que vous jugez optimal. Le projet remis doit compiler et ses tests doivent pouvoir être exécutés. Si certaines fonctionnalités ne sont pas terminées, décrivez clairement leur état dans le `README.md`, et commentez-les dans le code, pour éviter qu'ils bloquent la compilation ou l'exécution des tests pour le reste du projet. Pour vous mettre dans le rôle, considérez qu'une personne d'une autre équipe va devoir reprendre le projet là où vous l'avez laissé, avec seulement ce sujet pour contexte.
 
