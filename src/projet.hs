@@ -244,13 +244,73 @@ genUrlStr = do
   return $ schemeStr ++ "://" ++ domainStr ++ pathStr ++ requestStr ++ fragmentStr
 
 
-instance Arbitrary URL where
-  arbitrary = 
-    genUrlStr >>= \urlStr -> case parseUrl urlStr of
-      Left _ -> arbitrary 
-      Right url -> return url
+
+testproprety::String -> Bool
+testproprety s =
+    let check = parseUrl s in 
+        case check of
+            Left _ -> False
+            Right res -> (show res) == s 
+
+-- Part2
+
+
+data ProtocolFilter = Star | Name String
+    deriving (Show)
+
+data DomainFilterType = StarDom | NameDom String
+    deriving (Show)
+
+data DomainFilterTree = 
+    RootFil DomainFilterType |
+    NodeFil DomainFilterType DomainFilterTree
+    deriving (Show)
+
+data DomainFilter = 
+    DoubleStar DomainFilterTree|
+    NoDoubleStar DomainFilterTree |
+    JustDoubleStar
+    deriving (Show)
+
+data Filter = MkFilter{
+    protocolFilter::ProtocolFilter,
+    domainFilter::DomainFilter
+    
+}   deriving (Show)
+
+parseFilter :: String -> Either String Filter
+parseFilter str = case splitOn "://" str of
+    [s1,s2] -> do
+        res1 <- parseProtocolFilter s1
+        res2 <- parseDomainFilterStar s2
+        Right MkFilter{protocolFilter = res1,domainFilter = res2}
+
+    _ -> Left "Error"
+
+parseProtocolFilter :: String -> Either String ProtocolFilter
+parseProtocolFilter s = case s of
+    "*" -> Right Star
+    s | not (onlyAlpha s) -> Left "Error Protocol"
+    s -> Right (Name s)  
+
+parseDomainFilter:: [String] -> Either String DomainFilterTree
+parseDomainFilter s = case s of 
+    ["*"] -> Right (RootFil StarDom)
+    [x] | not (onlyAlpha x) -> Left "Error Domain"
+    [x] -> Right (RootFil (NameDom x))
+    ("*":xs) -> (\valid -> NodeFil StarDom valid) <$> (parseDomainFilter xs)
+    (x:_) | not (onlyAlpha x) -> Left "Error Domain"
+    (x:xs) -> (\valid -> NodeFil (NameDom x) valid) <$> (parseDomainFilter xs)
+    _ -> Left "Error Domain"
+
+parseDomainFilterStar:: String -> Either String DomainFilter
+parseDomainFilterStar s = case splitOn "." s of
+    ["**"] -> Right JustDoubleStar
+    ("**":xs) -> (\valid -> DoubleStar valid) <$> (parseDomainFilter xs)
+    x -> (\valid -> NoDoubleStar valid) <$> (parseDomainFilter x)
 
 
 main :: IO ()
-main = let tmp = parseUrl "http://www.google.com/hi/hello/?val1=val2&t1=v2#huiaudhaiuhdz" in
-    putStrLn (show tmp)
+main = do
+    putStrLn (show (parseFilter "*://**.hello.*.com") ++ show (parseUrl "http://google.com"))
+    quickCheck (forAll genUrlStr testproprety)
